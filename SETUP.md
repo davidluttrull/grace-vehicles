@@ -60,6 +60,18 @@ Send the drivers the page's address and the driver code. If you'd like a shorter
 - **iPhone:** open the link in Safari, tap the Share button, then tap **Add to Home Screen**.
 - **Android:** open the link in Chrome, tap **⋮**, then tap **Add to Home screen** (or **Install app**).
 
+### A link with the code in it
+
+So drivers don't have to type the code, send them a link with it on the end. Put your driver code after `#code=`:
+
+```
+https://davidluttrull.github.io/grace-vehicles/#code=123456
+```
+
+Opening the link saves the code on that phone and goes straight to the form. The page then takes the code off the address bar, so the home-screen icon and any screenshot don't show it. The part after `#` stays on the phone and isn't sent to GitHub.
+
+Anyone with this link can submit sign-outs, the same as anyone who knows the code. Send it to drivers by text or email; don't post it publicly. If the link has the wrong code, the page says so and asks for the code instead.
+
 ## How it works
 
 - The page asks for the driver code the first time, and the phone remembers it.
@@ -92,7 +104,7 @@ You can sort, filter, or add your own columns to the right of Sign-Outs. The scr
 
 ## Changing the driver code
 
-Change the code if it gets passed around more than you'd like. In Apps Script, click the gear icon (**Project Settings**) on the left, scroll to **Script Properties**, click **Edit script properties**, change the value of **DRIVER_CODE**, and click **Save script properties**. The new code works right away; you don't need to redeploy. Each phone asks for the new code the next time the page opens.
+Change the code if it gets passed around more than you'd like. In Apps Script, click the gear icon (**Project Settings**) on the left, scroll to **Script Properties**, click **Edit script properties**, change the value of **DRIVER_CODE**, and click **Save script properties**. The new code works right away; you don't need to redeploy. Each phone asks for the new code the next time the page opens. Links with the old code stop working too, so send drivers a new link.
 
 ## Changing the vehicles or the issue list
 

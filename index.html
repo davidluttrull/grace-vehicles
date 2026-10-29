@@ -782,7 +782,20 @@
 
   // Show the form at once from the lists saved on this phone, then refresh
   // them from the sheet (new drivers, a changed vehicle list).
+  // A link ending in #code=123456 saves the code on this phone, so drivers
+  // don't have to type it. The part after # never leaves the phone, and it's
+  // taken off the address once read. Returns true if the link had a code.
+  function codeFromLink() {
+    const m = /(?:^#|&)code=([^&]*)/.exec(location.hash);
+    if (!m) return false;
+    const code = decodeURIComponent(m[1]).trim();
+    if (code) store((s) => s.setItem(CODE_KEY, code));
+    history.replaceState(null, '', location.pathname + location.search);
+    return !!code;
+  }
+
   async function start() {
+    const fromLink = codeFromLink();
     const code = store((s) => s.getItem(CODE_KEY));
     if (!code) {
       if (!API_URL) {
@@ -805,7 +818,8 @@
     }
     if (fresh.status === 'badcode') {
       forgetCode();
-      showGate('The driver code has changed. Enter the new one.');
+      showGate(fromLink ? 'The code in that link isn\u2019t right. Enter the code from the church office.'
+        : 'The driver code has changed. Enter the new one.');
       return;
     }
     store((s) => s.setItem(CONFIG_KEY, JSON.stringify(fresh)));
