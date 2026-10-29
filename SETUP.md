@@ -88,8 +88,8 @@ Anyone with this link can submit sign-outs, the same as anyone who knows the cod
 
 Each sign-out is emailed right away to everyone on the **Notify Emails** tab.
 
-- When no issues are reported, the subject reads **Vehicle sign-out: Bus 25, John Smith (Thu, Oct 29)**.
-- When any issue is ticked, it reads **Repairs needed: Bus 25, John Smith (Thu, Oct 29)**, so it stands out in the inbox. The issues are listed in a red box with the driver's details.
+- When no issues are reported, the subject reads **Vehicle Sign-Out Log: Bus 25, John Smith (Thu, Oct 29)**.
+- When any issue is ticked, it reads **Vehicle Sign-Out Log: Repairs needed - Bus 25, John Smith (Thu, Oct 29)**, so it stands out in the inbox. The issues are listed in a red box with the driver's details.
 - An inspection that wasn't ticked shows **Not checked** in red.
 - The **Emailed** column on the Sign-Outs tab shows *Sent* with the time and number of people, *Not sent* if Notify Emails has no addresses, or *Failed* with the reason. A failed email doesn't lose the sign-out; it's still on the sheet.
 - To stop the emails, clear the addresses on Notify Emails.

@@ -186,7 +186,7 @@ function sendNotice_(record, issues) {
 
   const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
   const day = Utilities.formatDate(record['Date'], tz, 'EEE, MMM d');
-  const subject = (issues.length ? 'Repairs needed: ' : 'Vehicle sign-out: ') +
+  const subject = 'Vehicle Sign-Out Log: ' + (issues.length ? 'Repairs needed - ' : '') +
     record['Vehicle'] + ', ' + record['Driver'] + ' (' + day + ')';
   try {
     MailApp.sendEmail({
@@ -271,7 +271,7 @@ function noticeHtml_(record, issues, day) {
     '</table>' + issueBlock +
     '</div></div>' +
     '<p style="text-align:center;color:#5B6A50;font-size:12px;margin:12px 0 0;">' +
-    'Sent by the vehicle sign-out page. Every sign-out is on the ' + SIGNOUTS_NAME + ' tab.</p></div>';
+    'Sent by the vehicle sign-out page.</p></div>';
 }
 
 function esc_(s) {
