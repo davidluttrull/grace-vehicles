@@ -7,16 +7,20 @@
  * Sign-Outs tab and is emailed to everyone on the Notify Emails tab.
  * See SETUP.md for how to deploy it.
  *
- * To change the vehicles or the list of common issues, edit VEHICLES or
- * ISSUES below and deploy a new version. Drivers are kept on the Drivers tab:
- * new names are added there the first time someone signs out.
+ * The vehicles are listed on the Vehicles tab: add or delete a row there and
+ * the page shows the change the next time it opens. Drivers are kept on the
+ * Drivers tab: new names are added there the first time someone signs out.
+ * To change the list of common issues, edit ISSUES below and deploy a new
+ * version.
  */
 
 const SIGNOUTS_NAME = 'Sign-Outs';
 const DRIVERS_NAME = 'Drivers';
+const VEHICLES_NAME = 'Vehicles';
 const EMAILS_NAME = 'Notify Emails';
 
-const VEHICLES = ['Van 1', 'Van 2', 'Bus 3', 'Bus 25'];
+// The Vehicles tab starts with these. After that, the tab is the list.
+const STARTING_VEHICLES = ['Van 1', 'Van 2', 'Bus 3', 'Bus 25'];
 
 // Common problems drivers can tick. "Other" asks them to describe it.
 const ISSUES = [
@@ -90,6 +94,7 @@ function json_(value) {
  */
 function setup() {
   const sheet = signOutsTab_();
+  vehiclesTab_();
   driversTab_();
   emailsTab_();
   SpreadsheetApp.getActiveSpreadsheet().setActiveSheet(sheet);
@@ -120,7 +125,7 @@ function codeIsRight_(code) {
 }
 
 function pageConfig_() {
-  return { status: 'ok', vehicles: VEHICLES, issues: ISSUES, drivers: driverNames_(driversTab_()) };
+  return { status: 'ok', vehicles: vehicleNames_(), issues: ISSUES, drivers: driverNames_(driversTab_()) };
 }
 
 /** Saves one sign-out as a row, adds a new driver to the list, and emails it. */
@@ -130,7 +135,11 @@ function submitSignOut(form) {
   const driver = driverName_(form.driver);
   if (!driver) throw new Error('Please enter the driver\'s name.');
   const vehicle = String(form.vehicle || '');
-  if (VEHICLES.indexOf(vehicle) === -1) throw new Error('Please pick a vehicle.');
+  if (!vehicle) throw new Error('Please pick a vehicle.');
+  // A page opened before a vehicle was removed from the tab may still show it.
+  if (vehicleNames_().indexOf(vehicle) === -1) {
+    throw new Error(vehicle + ' is no longer on the vehicle list. Close the page, open it again, and pick a vehicle.');
+  }
 
   // A page with an older issue list may send one that's no longer in ISSUES.
   // Keep it rather than lose a reported problem.
@@ -375,6 +384,32 @@ function formatSignOuts_(sheet, headers) {
     .setRanges([sheet.getRange(2, 1, rows, headers.length)])
     .build();
   sheet.setConditionalFormatRules([rule]);
+}
+
+/** The Vehicles tab's names, top to bottom, skipping blanks and repeats. */
+function vehicleNames_() {
+  const tab = vehiclesTab_();
+  const last = tab.getLastRow();
+  if (last < 2) return [];
+  return tab.getRange(2, 1, last - 1, 1).getValues()
+    .map(function (r) { return String(r[0]).trim(); })
+    .filter(function (v, i, all) { return v && all.indexOf(v) === i; });
+}
+
+function vehiclesTab_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let tab = ss.getSheetByName(VEHICLES_NAME);
+  if (!tab) {
+    tab = ss.insertSheet(VEHICLES_NAME);
+    tab.getRange(1, 1, 1, 2).setValues([['Vehicle', 'The vehicles the page shows, in this order. ' +
+      'Add a row for a new vehicle; delete a row to take one off the page. Past sign-outs keep their vehicle.']]);
+    tab.getRange(1, 1).setFontWeight('bold').setFontColor('#ffffff').setBackground(BRAND_DEEP);
+    tab.getRange(1, 2).setFontColor('#5B6A50').setFontStyle('italic');
+    tab.getRange(2, 1, STARTING_VEHICLES.length, 1).setValues(STARTING_VEHICLES.map(function (v) { return [v]; }));
+    tab.setColumnWidth(1, 180);
+    tab.setFrozenRows(1);
+  }
+  return tab;
 }
 
 function driversTab_() {

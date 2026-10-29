@@ -26,8 +26,9 @@ The page talks to the script without any Google sign-in, so drivers don't need a
 1. In the function dropdown next to **Debug**, pick **setup**, then click **Run**.
 2. Google will ask for permission. Click **Review permissions** and choose your account.
 3. You'll get a warning that says "Google hasn't verified this app". That's expected for a script you wrote yourself. Click **Advanced → Go to Vehicle Sign-Out (unsafe) → Allow**. The script asks to edit this spreadsheet and to send email as you.
-4. Switch back to the Sheet. You should see three tabs:
+4. Switch back to the Sheet. You should see four tabs:
    - **Sign-Outs**, with a dark green header row
+   - **Vehicles**, listing Van 1, Van 2, Bus 3 and Bus 25
    - **Drivers**, empty for now
    - **Notify Emails**, with Robert Tucker and Shawn Criswell in column B
 5. On **Notify Emails**, type each person's email address in column A beside their name. To email someone else too, add their address on a new row. The name in column B is optional; the page uses it to tell the driver who was emailed.
@@ -78,7 +79,7 @@ Anyone with this link can submit sign-outs, the same as anyone who knows the cod
 - The date fills in as today. Tap it to change it.
 - **Driver name** suggests names from the Drivers tab as you type. Typing "smi" finds John Smith. A name that isn't on the list gets the note "New driver: … will be added to the list", and it's added when the form is submitted. A name typed all in lowercase is saved with capitals, and "john smith" matches "John Smith" on the list rather than adding him twice.
 - The phone remembers the last driver's name and fills it in next time.
-- Pick one vehicle: Van 1, Van 2, Bus 3 or Bus 25.
+- Pick one vehicle. The buttons are the vehicles on the Vehicles tab, in the same order.
 - Tick **Pre-trip inspection done** and **Post-trip inspection done** as they're finished. Neither is required. If the pre-trip box isn't ticked, the confirmation asks the driver to check before submitting.
 - Under **Issues or Repairs Needed**, tick anything that needs attention and add details in the box below. If **Other** is ticked, the details box has to be filled in. Leave everything blank if nothing's wrong.
 - Before saving, the page shows the vehicle, driver, date and number of issues and asks the driver to confirm. If saving fails, everything stays on the screen so the driver can try again.
@@ -97,6 +98,7 @@ Each sign-out is emailed right away to everyone on the **Notify Emails** tab.
 ## The Sheet
 
 - **Sign-Outs:** one row per sign-out: date, driver, vehicle, pre-trip and post-trip (Yes or No), the issues ticked, the details, when it was submitted, and whether it was emailed. Rows that reported an issue are shaded pink.
+- **Vehicles:** the vehicles the page shows, one per row in column A, in the order the page shows them. See "Adding or removing a vehicle" below.
 - **Drivers:** the names the page suggests, in alphabetical order. To fix a misspelled name, correct it here; to take someone off the list, delete their row. Phones pick up the change the next time the page opens. Past sign-outs keep the name as it was.
 - **Notify Emails:** who gets the email.
 
@@ -106,9 +108,19 @@ You can sort, filter, or add your own columns to the right of Sign-Outs. The scr
 
 Change the code if it gets passed around more than you'd like. In Apps Script, click the gear icon (**Project Settings**) on the left, scroll to **Script Properties**, click **Edit script properties**, change the value of **DRIVER_CODE**, and click **Save script properties**. The new code works right away; you don't need to redeploy. Each phone asks for the new code the next time the page opens. Links with the old code stop working too, so send drivers a new link.
 
-## Changing the vehicles or the issue list
+## Adding or removing a vehicle
 
-The vehicles are in `VEHICLES` near the top of `Code.gs`, and the common issues are in `ISSUES` just below. Keep the item named **Other** spelled exactly that way, because it's the one that asks for details. Edit the list, then follow "Updating the script" below. The page reads both lists from the script, so it doesn't need to change.
+Vehicles are kept on the **Vehicles** tab, one per row in column A. You don't need to touch the script or redeploy.
+
+- **New vehicle:** type its name in the next empty row, such as `Bus 40`.
+- **Vehicle gone:** delete its row. Its past sign-outs stay on the Sign-Outs tab.
+- **Rename or reorder:** edit the names or move the rows. The page shows them top to bottom.
+
+Phones show the new list a moment after the page opens. If someone submits from a page that was already open and still shows a vehicle you deleted, the page asks them to close it, open it again, and pick a vehicle. Blank rows are skipped, and a name listed twice shows once. If the tab is empty, the page says no vehicles are listed yet.
+
+## Changing the issue list
+
+The common issues are in `ISSUES` near the top of `Code.gs`. Keep the item named **Other** spelled exactly that way, because it's the one that asks for details. Edit the list, then follow "Updating the script" below. The page reads the list from the script, so it doesn't need to change.
 
 ## Updating the script
 

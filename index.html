@@ -422,6 +422,10 @@
       b.textContent = name;
       chips.appendChild(b);
     });
+    if (!CONFIG.vehicles.length) {
+      chips.innerHTML = '<p class="hint" style="grid-column: 1 / -1">No vehicles are listed yet. ' +
+        'Add them on the Vehicles tab of the sign-out sheet.</p>';
+    }
 
     $('#issues').innerHTML = CONFIG.issues.map((issue) =>
       '<label class="check-row"><input type="checkbox" data-issue="' + esc(issue) + '">' +
@@ -470,7 +474,8 @@
   function apply(data) {
     $('#date').value = data.date || today();
     $('#driver').value = data.driver || '';
-    setVehicle(data.vehicle || '');
+    // A vehicle taken off the Vehicles tab since it was picked is unpicked.
+    setVehicle(CONFIG.vehicles.indexOf(data.vehicle) === -1 ? '' : data.vehicle);
     $('#preTrip').checked = !!data.preTrip;
     $('#postTrip').checked = !!data.postTrip;
     const issues = data.issues || [];
