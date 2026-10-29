@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grace Vehicle Sign-Out</title>
+<meta name="theme-color" content="#233617">
+<meta name="apple-mobile-web-app-title" content="Vehicles">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #7BAE58;
+    --brand-deep: #233617;
+    --brand-mid: #4E7A35;
+    --bg: #F3F8EF;
+    --card: #FFFFFF;
+    --ink: #1E2A16;
+    --muted: #5B6A50;
+    --line: #DCE7D3;
+    --step-bg: #EFF6EA;
+    --step-line: #C6DBB6;
+    --step-ink: #233617;
+    --btn-bg: #233617;
+    --btn-ink: #FFFFFF;
+    --chip-on-bg: #233617;
+    --chip-on-ink: #FFFFFF;
+    --danger: #B3261E;
+    --warn-bg: #FCE8E6;
+    --shadow: 0 1px 2px rgba(35, 54, 23, .06), 0 2px 8px rgba(35, 54, 23, .06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10160C;
+      --card: #1A2414;
+      --ink: #E8F0E1;
+      --muted: #A3B396;
+      --line: #2D3B24;
+      --step-bg: #243319;
+      --step-line: #3A4D2E;
+      --step-ink: #E8F0E1;
+      --btn-bg: #7BAE58;
+      --btn-ink: #10160C;
+      --chip-on-bg: #7BAE58;
+      --chip-on-ink: #10160C;
+      --danger: #F2B8B5;
+      --warn-bg: #3A1D1B;
+      --shadow: none;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.4 'Poppins', system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  [hidden] { display: none !important; }
+
+  .top {
+    background: var(--brand-deep);
+    color: #fff;
+    padding: 18px 16px 20px;
+    text-align: center;
+  }
+  .top img { height: 52px; display: block; margin: 0 auto 6px; }
+  .top p { margin: 0; font-size: 14px; color: #CFE3C0; letter-spacing: .02em; }
+
+  main {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 12px 12px 120px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+  }
+  h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--brand-mid);
+  }
+  @media (prefers-color-scheme: dark) { h2 { color: var(--brand); } }
+  .hint { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+
+  .field { display: block; margin-top: 10px; }
+  .field > span, .field > .label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field textarea {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+    font-size: 16px;
+  }
+  .field textarea { min-height: 84px; resize: vertical; }
+  input:focus, textarea:focus, button:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 1px;
+  }
+  input[type="date"] { -webkit-appearance: none; appearance: none; }
+
+  .driver-wrap { position: relative; }
+  .suggest {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 4px;
+    border: 1px solid var(--step-line);
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
+    max-height: 264px;
+    overflow-y: auto;
+  }
+  .suggest li {
+    padding: 11px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .suggest li:hover, .suggest li[aria-selected="true"] { background: var(--step-bg); }
+  .suggest mark { background: none; color: inherit; font-weight: 600; }
+  .new-driver { font-size: 13px; color: var(--brand-mid); margin: 6px 0 0; font-weight: 500; }
+  @media (prefers-color-scheme: dark) { .new-driver { color: var(--brand); } }
+
+  .chips {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .chip {
+    min-height: 58px;
+    border: 1px solid var(--step-line);
+    background: var(--step-bg);
+    color: var(--step-ink);
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 500;
+  }
+  .chip[aria-checked="true"] {
+    background: var(--chip-on-bg);
+    border-color: var(--chip-on-bg);
+    color: var(--chip-on-ink);
+    font-weight: 600;
+  }
+
+  .check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .check-row:first-of-type { border-top: 0; }
+  .check-row input {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    margin: 0;
+    accent-color: var(--brand-mid);
+  }
+  .check-row strong { display: block; font-weight: 500; }
+  .check-row small { display: block; font-size: 13px; color: var(--muted); }
+  .checks { margin-top: 6px; }
+  .issue-list .check-row { padding: 10px 0; }
+  .issue-list .check-row input { width: 22px; height: 22px; }
+
+  .link {
+    display: block;
+    margin: 4px auto 0;
+    background: none;
+    border: 0;
+    color: var(--muted);
+    text-decoration: underline;
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--brand-deep);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, .15);
+  }
+  .bar-inner { max-width: 560px; margin: 0 auto; }
+  .primary {
+    width: 100%;
+    min-height: 52px;
+    padding: 0 28px;
+    border: 0;
+    border-radius: 14px;
+    background: var(--brand);
+    color: #10160C;
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .primary:disabled { opacity: .6; }
+  .bar .primary:focus-visible { outline-color: #fff; }
+
+  .gate { max-width: 420px; margin: 24px auto 0; }
+  .gate .primary { background: var(--btn-bg); color: var(--btn-ink); margin-top: 14px; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(16, 22, 12, .55);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 16px;
+    z-index: 10;
+  }
+  .sheet {
+    width: 100%;
+    max-width: 440px;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 22px 20px 18px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .25);
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+  @media (min-width: 600px) { .overlay { align-items: center; } }
+  .sheet h3 { margin: 0 0 6px; font-size: 19px; }
+  .sheet p { margin: 0 0 18px; color: var(--muted); }
+  .sheet .big { display: block; font-size: 32px; font-weight: 700; color: var(--ink); line-height: 1.15; margin-bottom: 2px; }
+  .sheet .warn {
+    display: block;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--warn-bg);
+    color: var(--danger);
+    font-weight: 500;
+  }
+  .sheet-buttons { display: flex; gap: 10px; }
+  .sheet-buttons button { flex: 1; min-height: 50px; border-radius: 12px; font-weight: 600; }
+  .secondary { background: var(--step-bg); border: 1px solid var(--step-line); color: var(--step-ink); }
+  .sheet .primary { background: var(--btn-bg); color: var(--btn-ink); padding: 0 12px; }
+
+  .done { text-align: center; }
+  .check {
+    width: 64px; height: 64px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    background: var(--brand);
+    display: grid;
+    place-items: center;
+  }
+  .check::after {
+    content: '';
+    width: 14px; height: 26px;
+    border-right: 4px solid #fff;
+    border-bottom: 4px solid #fff;
+    transform: rotate(45deg) translate(-2px, -3px);
+  }
+
+  .loading { text-align: center; padding: 48px 16px; color: var(--muted); }
+  .loading button { min-height: 46px; padding: 0 22px; border-radius: 12px; font-weight: 600; }
+
+  .toast {
+    position: fixed;
+    left: 12px; right: 12px;
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    max-width: 536px;
+    margin: 0 auto;
+    background: var(--danger);
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 15px;
+    z-index: 5;
+  }
+  @media (prefers-color-scheme: dark) { .toast { color: #10160C; } }
+</style>
+</head>
+<body>
+  <header class="top">
+    <img src="logo.png" alt="Grace Baptist Church">
+    <p>Vehicle Sign-Out</p>
+  </header>
+
+  <div class="loading" id="loading">
+    <p id="loadingText">Loading&hellip;</p>
+    <button type="button" class="secondary" id="retry" hidden>Try again</button>
+  </div>
+
+  <main id="gate" hidden>
+    <form class="card gate" id="gateForm">
+      <h2>Driver Code</h2>
+      <label class="field">
+        <span>Enter the 6-digit code</span>
+        <input id="gateCode" type="password" inputmode="numeric" autocomplete="off" maxlength="20">
+      </label>
+      <p class="hint">Get the code from the church office. This phone remembers it.</p>
+      <button type="submit" class="primary" id="gateGo">Continue</button>
+    </form>
+  </main>
+
+  <main id="form" hidden>
+    <section class="card" id="tripCard">
+      <h2>Trip</h2>
+      <label class="field">
+        <span>Date</span>
+        <input type="date" id="date" required>
+      </label>
+      <div class="field driver-wrap">
+        <label for="driver" class="label">Driver name</label>
+        <input id="driver" maxlength="60" autocomplete="off" autocapitalize="words" spellcheck="false"
+          role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest"
+          placeholder="Start typing your name">
+        <ul class="suggest" id="suggest" role="listbox" hidden></ul>
+        <p class="new-driver" id="newDriver" hidden></p>
+      </div>
+    </section>
+
+    <section class="card" id="vehicleCard">
+      <h2>Vehicle</h2>
+      <div class="chips" id="vehicles" role="radiogroup" aria-label="Vehicle"></div>
+    </section>
+
+    <section class="card">
+      <h2>Inspections</h2>
+      <div class="checks">
+        <label class="check-row">
+          <input type="checkbox" id="preTrip">
+          <span><strong>Pre-trip inspection done</strong>
+            <small>Before you leave: tires, lights, mirrors, fluids and gauges.</small></span>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" id="postTrip">
+          <span><strong>Post-trip inspection done</strong>
+            <small>When you return: walk around for damage, check for items left behind, take out trash.</small></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Issues or Repairs Needed</h2>
+      <p class="hint">Check anything that needs attention. Leave them all blank if nothing&rsquo;s wrong.</p>
+      <div class="checks issue-list" id="issues"></div>
+      <label class="field" id="detailsWrap">
+        <span id="detailsLabel">Details (optional)</span>
+        <textarea id="details" maxlength="1000" placeholder="Which tire, which light, what you noticed&hellip;"></textarea>
+      </label>
+    </section>
+
+    <button type="button" class="link" id="clear">Clear form</button>
+  </main>
+
+  <div class="bar" id="bar" hidden>
+    <div class="bar-inner">
+      <button type="button" class="primary" id="submit">Submit</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="alert" hidden></div>
+
+  <div class="overlay" id="dialog" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+      <div class="check" id="dialogCheck" hidden></div>
+      <h3 id="dialogTitle"></h3>
+      <p id="dialogBody"></p>
+      <div class="sheet-buttons">
+        <button type="button" class="secondary" id="dialogCancel">Cancel</button>
+        <button type="button" class="primary" id="dialogOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // The Apps Script web app URL (Deploy > Manage deployments). It stays the
+  // same when a new version is deployed.
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzRklVVVX9mcn8KGX03dbyWtkNxCDX2W_vhw9yNMiEnZzxiK-A_e0PF-oemD5tfidsEDA/exec';
+  const CONFIG_KEY = 'gbc-vehicles-config';
+  const NAME_KEY = 'gbc-vehicles-name';
+  const CODE_KEY = 'gbc-vehicles-code';
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+  let CONFIG;
+  let vehicle = '';
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function store(fn) {
+    try { return fn(window.localStorage); } catch (e) { return null; }
+  }
+
+  // ---- Build the form -----------------------------------------------------
+
+  function build() {
+    const chips = $('#vehicles');
+    chips.innerHTML = '';
+    CONFIG.vehicles.forEach((name) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', 'false');
+      b.dataset.vehicle = name;
+      b.textContent = name;
+      chips.appendChild(b);
+    });
+
+    $('#issues').innerHTML = CONFIG.issues.map((issue) =>
+      '<label class="check-row"><input type="checkbox" data-issue="' + esc(issue) + '">' +
+      '<span><strong>' + esc(issue) + '</strong></span></label>').join('');
+  }
+
+  // ---- Form state ---------------------------------------------------------
+
+  function today() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function setVehicle(name) {
+    vehicle = name;
+    $$('.chip').forEach((c) => c.setAttribute('aria-checked', String(c.dataset.vehicle === name)));
+  }
+
+  function checkedIssues() {
+    return $$('input[data-issue]').filter((i) => i.checked).map((i) => i.dataset.issue);
+  }
+
+  function updateDetails() {
+    const other = checkedIssues().indexOf('Other') !== -1;
+    $('#detailsLabel').textContent = other ? 'Describe the other issue' : 'Details (optional)';
+  }
+
+  // Trims, single spaces, and capitals if typed all lowercase, as the sheet saves it.
+  function tidyName(value) {
+    const s = value.trim().replace(/\s+/g, ' ');
+    return s === s.toLowerCase() ? s.replace(/(^|[\s'-])([a-z])/g, (m, before, letter) => before + letter.toUpperCase()) : s;
+  }
+
+  function collect() {
+    return {
+      date: $('#date').value,
+      driver: tidyName($('#driver').value),
+      vehicle: vehicle,
+      preTrip: $('#preTrip').checked,
+      postTrip: $('#postTrip').checked,
+      issues: checkedIssues(),
+      details: $('#details').value.trim(),
+    };
+  }
+
+  function apply(data) {
+    $('#date').value = data.date || today();
+    $('#driver').value = data.driver || '';
+    setVehicle(data.vehicle || '');
+    $('#preTrip').checked = !!data.preTrip;
+    $('#postTrip').checked = !!data.postTrip;
+    const issues = data.issues || [];
+    $$('input[data-issue]').forEach((i) => { i.checked = issues.indexOf(i.dataset.issue) !== -1; });
+    $('#details').value = data.details || '';
+    updateDetails();
+    showNewDriver();
+  }
+
+  function resetForm() {
+    apply({ date: today(), driver: store((s) => s.getItem(NAME_KEY)) || '' });
+    window.scrollTo(0, 0);
+  }
+
+  // ---- Driver suggestions -------------------------------------------------
+
+  let active = -1;
+
+  function knownDriver(name) {
+    const lower = name.toLowerCase();
+    return CONFIG.drivers.find((d) => d.toLowerCase() === lower);
+  }
+
+  // Names where some word starts with what's typed ("smi" finds John Smith).
+  function matches(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return CONFIG.drivers.slice();
+    return CONFIG.drivers.filter((d) => (' ' + d.toLowerCase()).indexOf(' ' + q) !== -1 ||
+      d.toLowerCase().indexOf(q) === 0);
+  }
+
+  function highlight(name, query) {
+    const q = query.trim();
+    const at = q ? name.toLowerCase().indexOf(q.toLowerCase()) : -1;
+    if (at === -1) return esc(name);
+    return esc(name.slice(0, at)) + '<mark>' + esc(name.slice(at, at + q.length)) + '</mark>' + esc(name.slice(at + q.length));
+  }
+
+  function showSuggestions() {
+    const input = $('#driver');
+    const list = $('#suggest');
+    const found = matches(input.value).filter((d) => d !== input.value.trim());
+    active = -1;
+    if (!found.length) {
+      hideSuggestions();
+      return;
+    }
+    list.innerHTML = found.map((d, i) =>
+      '<li role="option" id="opt' + i + '" data-name="' + esc(d) + '">' + highlight(d, input.value) + '</li>').join('');
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+  }
+
+  function hideSuggestions() {
+    $('#suggest').hidden = true;
+    $('#driver').setAttribute('aria-expanded', 'false');
+    $('#driver').removeAttribute('aria-activedescendant');
+    showNewDriver();
+  }
+
+  function pickDriver(name) {
+    $('#driver').value = name;
+    hideSuggestions();
+    showNewDriver();
+  }
+
+  function showNewDriver() {
+    const name = tidyName($('#driver').value);
+    const note = $('#newDriver');
+    // Wait until the suggestions close, so it doesn't flash up while typing.
+    note.hidden = !name || !CONFIG || !!knownDriver(name) || !$('#suggest').hidden;
+    note.textContent = 'New driver: ' + name + ' will be added to the list.';
+  }
+
+  function moveActive(step) {
+    const items = $$('#suggest li');
+    if (!items.length) return;
+    active = (active + step + items.length) % items.length;
+    items.forEach((li, i) => li.setAttribute('aria-selected', String(i === active)));
+    items[active].scrollIntoView({ block: 'nearest' });
+    $('#driver').setAttribute('aria-activedescendant', items[active].id);
+  }
+
+  // ---- Dialogs and messages -----------------------------------------------
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 6000);
+  }
+
+  function dialog(opts) {
+    return new Promise((resolve) => {
+      $('#dialogTitle').textContent = opts.title;
+      $('#dialogBody').innerHTML = opts.body;
+      $('#dialogOk').textContent = opts.ok || 'OK';
+      $('#dialogCancel').hidden = !opts.cancel;
+      $('#dialogCancel').textContent = opts.cancel || '';
+      $('#dialogCheck').hidden = !opts.check;
+      $('.sheet').classList.toggle('done', !!opts.check);
+      $('#dialog').hidden = false;
+      $('#dialogOk').focus();
+      const finish = (ok) => {
+        $('#dialog').hidden = true;
+        $('#dialogOk').onclick = $('#dialogCancel').onclick = null;
+        resolve(ok);
+      };
+      $('#dialogOk').onclick = () => finish(true);
+      $('#dialogCancel').onclick = () => finish(false);
+    });
+  }
+
+  function dateLabel(value) {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function names(list) {
+    if (list.length < 2) return list.join('');
+    return list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1];
+  }
+
+  // ---- Talking to the sheet -----------------------------------------------
+
+  // Every request is a POST with the driver code. The body is plain text and
+  // no cookies are sent, so there's no CORS preflight and no Google login.
+  async function api(body) {
+    if (!API_URL) throw new Error('This page isn\u2019t connected to the sign-out sheet yet.');
+    let res;
+    try {
+      const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
+      res = await r.json();
+    } catch (e) {
+      throw new Error('Couldn\u2019t reach the sign-out sheet. Check your connection.');
+    }
+    if (res.status === 'error') throw new Error(res.message);
+    return res;
+  }
+
+  function forgetCode() {
+    store((s) => s.removeItem(CODE_KEY));
+    store((s) => s.removeItem(CONFIG_KEY));
+  }
+
+  // ---- Submit -------------------------------------------------------------
+
+  function validate(data) {
+    if (!data.date) return ['Pick the date.', '#date'];
+    if (!data.driver) return ['Enter the driver\u2019s name.', '#driver'];
+    if (!data.vehicle) return ['Pick which vehicle.', '#vehicleCard'];
+    if (data.issues.indexOf('Other') !== -1 && !data.details) return ['Describe the other issue.', '#details'];
+    return null;
+  }
+
+  async function submit() {
+    const data = collect();
+    const problem = validate(data);
+    if (problem) {
+      toast(problem[0]);
+      const el = $(problem[1]);
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (el.matches('input, textarea')) el.focus({ preventScroll: true });
+      return;
+    }
+    $('#toast').hidden = true;
+    hideSuggestions();
+    const n = data.issues.length;
+    const ok = await dialog({
+      title: 'Submit sign-out?',
+      body: '<span class="big">' + esc(data.vehicle) + '</span>' + esc(data.driver) + ' &middot; ' +
+        esc(dateLabel(data.date)) + '<br>' +
+        (n ? n + (n === 1 ? ' issue' : ' issues') + ' reported' : 'No issues reported') +
+        (data.preTrip ? '' : '<span class="warn">The pre-trip inspection isn\u2019t checked.</span>'),
+      ok: 'Submit',
+      cancel: 'Go back',
+    });
+    if (ok) send(data);
+  }
+
+  async function send(data) {
+    const btn = $('#submit');
+    btn.disabled = true;
+    btn.textContent = 'Saving\u2026';
+    let res;
+    try {
+      res = await api({ action: 'submit', code: store((s) => s.getItem(CODE_KEY)), form: data });
+    } catch (err) {
+      toast(err.message + ' Your answers are still here, so try again.');
+      return;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Submit';
+    }
+
+    if (res.status === 'badcode') {
+      forgetCode();
+      showGate('The driver code has changed. Enter the new one, then submit again.');
+      return;
+    }
+    store((s) => s.setItem(NAME_KEY, res.driver));
+    if (!knownDriver(res.driver)) {
+      CONFIG.drivers.push(res.driver);
+      CONFIG.drivers.sort((a, b) => a.localeCompare(b));
+      store((s) => s.setItem(CONFIG_KEY, JSON.stringify(CONFIG)));
+    }
+    await dialog({
+      check: true,
+      title: 'Sign-out saved',
+      body: '<span class="big">' + esc(data.vehicle) + '</span>' + esc(res.driver) + ' &middot; ' +
+        esc(dateLabel(data.date)) +
+        (res.notified.length ? '<br>Emailed to ' + esc(names(res.notified)) + '.' : ''),
+      ok: 'Done',
+    });
+    resetForm();
+  }
+
+  // ---- Events -------------------------------------------------------------
+
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (chip) setVehicle(chip.dataset.vehicle);
+  });
+
+  document.addEventListener('change', (e) => {
+    if (e.target.matches('input[data-issue]')) {
+      updateDetails();
+      if (e.target.dataset.issue === 'Other' && e.target.checked) $('#details').focus();
+    }
+  });
+
+  const driver = $('#driver');
+  driver.addEventListener('input', () => { showSuggestions(); showNewDriver(); });
+  driver.addEventListener('focus', showSuggestions);
+  driver.addEventListener('blur', () => setTimeout(hideSuggestions, 150));
+  driver.addEventListener('keydown', (e) => {
+    if ($('#suggest').hidden) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
+    if (e.key === 'Escape') hideSuggestions();
+    if (e.key === 'Enter' && active !== -1) {
+      e.preventDefault();
+      pickDriver($$('#suggest li')[active].dataset.name);
+    }
+  });
+  // pointerdown keeps the focus in the box, so blur doesn't hide the list first.
+  $('#suggest').addEventListener('pointerdown', (e) => e.preventDefault());
+  $('#suggest').addEventListener('click', (e) => {
+    const li = e.target.closest('li');
+    if (li) pickDriver(li.dataset.name);
+  });
+
+  $('#submit').addEventListener('click', submit);
+  $('#clear').addEventListener('click', async () => {
+    const ok = await dialog({ title: 'Clear the form?', body: 'This erases everything on this page.', ok: 'Clear', cancel: 'Cancel' });
+    if (ok) resetForm();
+  });
+
+  // ---- Start --------------------------------------------------------------
+
+  function showGate(msg) {
+    $('#loading').hidden = true;
+    $('#form').hidden = true;
+    $('#bar').hidden = true;
+    $('#gate').hidden = false;
+    $('#gateCode').value = '';
+    if (msg) toast(msg);
+    $('#gateCode').focus();
+  }
+
+  function showForm(config) {
+    const first = !CONFIG;
+    const data = first ? null : collect();
+    CONFIG = config;
+    build();
+    $('#loading').hidden = true;
+    $('#gate').hidden = true;
+    $('#toast').hidden = true;
+    $('#form').hidden = false;
+    $('#bar').hidden = false;
+    if (first) resetForm(); else apply(data);
+  }
+
+  $('#gateForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const code = $('#gateCode').value.trim();
+    if (!code) return;
+    const btn = $('#gateGo');
+    btn.disabled = true;
+    btn.textContent = 'Checking\u2026';
+    try {
+      const res = await api({ action: 'load', code: code });
+      if (res.status === 'badcode') {
+        showGate('That code isn\u2019t right. Check with the church office.');
+        return;
+      }
+      store((s) => s.setItem(CODE_KEY, code));
+      store((s) => s.setItem(CONFIG_KEY, JSON.stringify(res)));
+      showForm(res);
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Continue';
+    }
+  });
+
+  // Show the form at once from the lists saved on this phone, then refresh
+  // them from the sheet (new drivers, a changed vehicle list).
+  async function start() {
+    const code = store((s) => s.getItem(CODE_KEY));
+    if (!code) {
+      if (!API_URL) {
+        $('#loadingText').textContent = 'This page isn\u2019t connected to the sign-out sheet yet.';
+        return;
+      }
+      showGate();
+      return;
+    }
+    const cached = store((s) => JSON.parse(s.getItem(CONFIG_KEY)));
+    if (cached) showForm(cached);
+    let fresh;
+    try {
+      fresh = await api({ action: 'load', code: code });
+    } catch (err) {
+      if (cached) return;
+      $('#loadingText').textContent = err.message;
+      $('#retry').hidden = false;
+      return;
+    }
+    if (fresh.status === 'badcode') {
+      forgetCode();
+      showGate('The driver code has changed. Enter the new one.');
+      return;
+    }
+    store((s) => s.setItem(CONFIG_KEY, JSON.stringify(fresh)));
+    if (!cached || JSON.stringify(fresh) !== JSON.stringify(cached)) showForm(fresh);
+  }
+
+  $('#retry').addEventListener('click', () => {
+    $('#retry').hidden = true;
+    $('#loadingText').textContent = 'Loading\u2026';
+    start();
+  });
+
+  start();
+</script>
+</body>
+</html>
