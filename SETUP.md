@@ -1,6 +1,6 @@
 # Vehicle Sign-Out: Setup
 
-This replaces the paper vehicle sign-out sheet with a web page drivers open on their phones. A driver checks a vehicle out before a trip (date, name, vehicle) and checks it back in afterward with the post-trip inspection and any issues. Each trip is one row in a Google Sheet, and each check-out and check-in is emailed to Robert Tucker and Shawn Criswell. The pre-trip inspection isn't on the page, because it's done for the drivers.
+This replaces the paper vehicle sign-out sheet with a web page drivers open on their phones. A driver checks a vehicle out before a trip (date and time, name, vehicle) and checks it back in afterward with the post-trip inspection and any issues. Each trip is one row in a Google Sheet, and each check-out and check-in is emailed to Robert Tucker and Shawn Criswell. The pre-trip inspection isn't on the page, because it's done for the drivers.
 
 It has two parts:
 
@@ -79,11 +79,11 @@ The page has two tabs at the top: **Check Out** and **Check In**. The Check In t
 
 ### Checking out
 
-- The date fills in as today. Tap it to change it.
+- The date and time fill in as now. Tap either one to change it, for example when a driver forgot to check out before leaving and is filling it in afterward. If the page sits open, they keep up with the clock until the driver changes one. A time later than now gets a warning before saving, in case it's a mistake.
 - **Driver name** suggests names from the Drivers tab as you type. Typing "smi" finds John Smith. A name that isn't on the list gets the note "New driver: ... will be added to the list", and it's added when the form is saved. A name typed all in lowercase is saved with capitals, and "john smith" matches "John Smith" on the list rather than adding him twice.
 - The phone remembers the last driver's name and fills it in next time.
 - Pick one vehicle. The buttons are the vehicles on the Vehicles tab, in the same order. A vehicle that's already out says who has it, such as **Out: John Smith**.
-- Before saving, the page shows the vehicle, driver and date and asks the driver to confirm. After saving, it says who was emailed.
+- Before saving, the page shows the vehicle, driver, date and time and asks the driver to confirm. After saving, it says who was emailed.
 - After check-out, the page switches to Check In with that vehicle picked, ready for when the driver gets back. The next time the page opens on that phone, it opens on Check In too, until the vehicle is checked in.
 
 If a driver checks out a vehicle that's still out (say the last driver forgot to check it in), the page warns them first. If they go ahead, the earlier trip is marked **Not checked in** on the sheet and the new trip starts.
@@ -91,6 +91,7 @@ If a driver checks out a vehicle that's still out (say the last driver forgot to
 ### Checking in
 
 - Pick the vehicle you're bringing back. Only vehicles that are checked out are shown, each with the driver's name and the day it went out. If nothing is out, the page says so.
+- A note reads "If you forgot to Check Out your vehicle, first fill out the Check Out form." Tapping **Check Out** in the note switches to that form. The driver checks the vehicle out with the time they left, then checks it in.
 - The driver name is whoever is checking it in. It doesn't have to be the person who checked it out.
 - **Post-Trip Inspection:** the driver ticks each item: walked around the vehicle and looked for damage, checked for items left behind, took out the trash. All of them are required.
 - **Issues or Repairs Needed:** tick anything that needs attention and add details in the box below. If **Other** is ticked, the details box has to be filled in. Leave everything blank if nothing's wrong.
@@ -110,14 +111,14 @@ Everyone on the **Notify Emails** tab gets an email right away each time a vehic
 ### Check-out
 
 - The subject reads **Vehicle Sign-Out Log: Bus 25 checked out, John Smith (Thu, Oct 29)**, with the trip date.
-- The email shows the driver, the trip date, and when it was checked out.
+- The email shows the driver and the date and time it was checked out.
 - If the vehicle was still out on an earlier trip that nobody checked in, the email has an orange note naming that driver and saying the trip was marked *Not checked in*.
 
 ### Check-in
 
 - When no issues are reported, the subject reads **Vehicle Sign-Out Log: Bus 25 returned, John Smith (Thu, Oct 29)**.
 - When any issue is ticked, it reads **Vehicle Sign-Out Log: Repairs needed - Bus 25 returned, John Smith (Thu, Oct 29)**, so it stands out in the inbox. The issues are listed in a red box.
-- The email shows who drove, the day it was checked out, when it was checked in, and who checked it in if that was someone else.
+- The email shows who drove, when it was checked out and checked in, and who checked it in if that was someone else.
 ### Both
 
 - The **Emailed** column on the Sign-Outs tab shows how each email went, such as *Check-out: Sent 11/9 4:05 PM to 2; Check-in: Sent 11/9 6:30 PM to 2*. Each part says *Sent* with the time and number of people, *Not sent* if Notify Emails has no addresses, or *Failed* with the reason. A failed email doesn't lose the check-out or check-in; it's still on the sheet.
@@ -125,7 +126,7 @@ Everyone on the **Notify Emails** tab gets an email right away each time a vehic
 
 ## The Sheet
 
-- **Sign-Outs:** one row per trip. Check-out fills in the date, driver, vehicle, **Status** (*Out*), **Checked Out At** and **Emailed**. Check-in changes the status to *Returned*, fills in **Checked In At**, **Checked In By**, **Post-Trip Inspection**, **Issues** and **Issue Details**, and adds its result to **Emailed**. The **Trip ID** column is how the page finds the row at check-in; leave it alone.
+- **Sign-Outs:** one row per trip. Check-out fills in the date, driver, vehicle, **Status** (*Out*), **Checked Out At** (the date and time the driver set) and **Emailed**. Check-in changes the status to *Returned*, fills in **Checked In At**, **Checked In By**, **Post-Trip Inspection**, **Issues** and **Issue Details**, and adds its result to **Emailed**. The **Trip ID** column is how the page finds the row at check-in; leave it alone.
   - Yellow rows are vehicles still out.
   - Orange rows are trips marked *Not checked in*, because the vehicle was checked out again before anyone checked it in.
   - Pink rows reported an issue.

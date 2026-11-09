@@ -115,7 +115,26 @@
     outline: 2px solid var(--brand);
     outline-offset: 1px;
   }
-  input[type="date"] { -webkit-appearance: none; appearance: none; }
+  input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: none; }
+  .when { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .when .field, .when input { min-width: 0; }
+
+  .note {
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    border: 1px solid var(--step-line);
+    border-radius: 10px;
+    background: var(--step-bg);
+    color: var(--step-ink);
+    font-size: 14px;
+  }
+  .inline-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-weight: 600;
+    text-decoration: underline;
+  }
 
   .driver-wrap { position: relative; }
   .suggest {
@@ -366,10 +385,19 @@
 
     <section class="card" id="tripCard">
       <h2 id="tripTitle">Trip</h2>
-      <label class="field" id="dateWrap">
-        <span>Date</span>
-        <input type="date" id="date" required>
-      </label>
+      <div id="dateWrap">
+        <div class="when">
+          <label class="field">
+            <span>Date</span>
+            <input type="date" id="date" required>
+          </label>
+          <label class="field">
+            <span>Time</span>
+            <input type="time" id="time" required>
+          </label>
+        </div>
+        <p class="hint">Set to now. Tap to change it if you left earlier.</p>
+      </div>
       <div class="field driver-wrap">
         <label for="driver" class="label">Driver name</label>
         <input id="driver" maxlength="60" autocomplete="off" autocapitalize="words" spellcheck="false"
@@ -383,6 +411,8 @@
     <section class="card" id="vehicleCard">
       <h2 id="vehicleTitle">Vehicle</h2>
       <p class="hint" id="vehicleHint" hidden>Pick the vehicle you&rsquo;re bringing back.</p>
+      <p class="note" id="forgotNote" hidden>If you forgot to Check Out your vehicle, first fill out the
+        <button type="button" class="inline-link" data-mode="out">Check Out</button> form.</p>
       <div class="chips" id="vehicles" role="radiogroup" aria-label="Vehicle"></div>
       <div class="chips" id="trips" role="radiogroup" aria-label="Vehicle to check in" hidden></div>
     </section>
@@ -442,6 +472,7 @@
   let vehicle = '';  // Check Out: the vehicle picked
   let tripId = '';   // Check In: the trip picked
   let busy = false;  // saving, so a refresh doesn't redraw the form underneath
+  let whenTouched = false; // the driver changed the date or time, so leave it alone
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -502,6 +533,19 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
 
+  function nowTime() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  // Until the driver changes them, the date and time follow the clock, so a
+  // page left open for an hour (or a day) still checks out at the right time.
+  function freshenWhen() {
+    if (whenTouched) return;
+    $('#date').value = today();
+    $('#time').value = nowTime();
+  }
+
   function setMode(m) {
     mode = m;
     const out = m === 'out';
@@ -510,6 +554,7 @@
     $('#dateWrap').hidden = !out;
     $('#vehicleTitle').textContent = out ? 'Vehicle' : 'Vehicle to Check In';
     $('#vehicleHint').hidden = out;
+    $('#forgotNote').hidden = out;
     $('#vehicles').hidden = !out;
     $('#trips').hidden = out;
     // With nothing checked out, there's nothing to inspect.
@@ -553,6 +598,7 @@
     return {
       mode: mode,
       date: $('#date').value,
+      time: $('#time').value,
       driver: tidyName($('#driver').value),
       vehicle: vehicle,
       tripId: tripId,
@@ -565,6 +611,7 @@
   function apply(data) {
     setMode(data.mode || 'out');
     $('#date').value = data.date || today();
+    $('#time').value = data.time || nowTime();
     $('#driver').value = data.driver || '';
     // A vehicle taken off the Vehicles tab, or a trip checked in from
     // another phone, since it was picked is unpicked.
@@ -582,11 +629,13 @@
   // A fresh form. If the vehicle this phone checked out is still out, it
   // opens on Check In with that vehicle picked.
   function resetForm() {
+    whenTouched = false;
     const mine = findTrip(store((s) => s.getItem(TRIP_KEY)));
     apply({
       mode: mine ? 'in' : 'out',
       tripId: mine ? mine.id : '',
       date: today(),
+      time: nowTime(),
       driver: store((s) => s.getItem(NAME_KEY)) || '',
     });
     window.scrollTo(0, 0);
@@ -698,6 +747,12 @@
     return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   }
 
+  // "14:05" -> "2:05 PM"
+  function timeLabel(value) {
+    const [h, m] = value.split(':').map(Number);
+    return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+
   // "today", or "Tue, Nov 3" for an earlier day.
   function shortDay(value) {
     return value === today() ? 'today' : dateLabel(value);
@@ -735,6 +790,7 @@
   function validate(data) {
     if (data.mode === 'out') {
       if (!data.date) return ['Pick the date.', '#date'];
+      if (!data.time) return ['Pick the time.', '#time'];
       if (!data.driver) return ['Enter your name.', '#driver'];
       if (!data.vehicle) return ['Pick which vehicle.', '#vehicleCard'];
       return null;
@@ -748,6 +804,7 @@
   }
 
   async function submit() {
+    if (mode === 'out') freshenWhen();
     const data = collect();
     const problem = validate(data);
     if (problem) {
@@ -762,10 +819,14 @@
     let ok;
     if (data.mode === 'out') {
       const t = outTrip(data.vehicle);
+      const [y, mo, d] = data.date.split('-').map(Number);
+      const [h, mi] = data.time.split(':').map(Number);
+      const later = new Date(y, mo - 1, d, h, mi) - Date.now() > 10 * 60000;
       ok = await dialog({
         title: 'Check out this vehicle?',
         body: '<span class="big">' + esc(data.vehicle) + '</span>' + esc(data.driver) + ' &middot; ' +
-          esc(dateLabel(data.date)) +
+          esc(dateLabel(data.date)) + ' at ' + esc(timeLabel(data.time)) +
+          (later ? '<span class="warn">That time is later than now. Go back to change it if that\u2019s a mistake.</span>' : '') +
           (t ? '<span class="warn">' + esc(data.vehicle) + ' is still checked out to ' + esc(t.driver) +
             (t.date ? ' since ' + esc(shortDay(t.date)) : '') + '. Checking it out again closes that trip ' +
             'as not checked in.</span>' : ''),
@@ -792,7 +853,7 @@
     const label = btn.textContent;
     const out = data.mode === 'out';
     const form = out
-      ? { date: data.date, driver: data.driver, vehicle: data.vehicle }
+      ? { date: data.date, time: data.time, driver: data.driver, vehicle: data.vehicle }
       : { tripId: data.tripId, driver: data.driver, postTripDone: true, issues: data.issues, details: data.details };
     const trip = findTrip(data.tripId);
     const vehicleName = out ? data.vehicle : (trip ? trip.vehicle : '');
@@ -831,7 +892,7 @@
         check: true,
         title: 'Checked out',
         body: '<span class="big">' + esc(vehicleName) + '</span>' + esc(res.driver) + ' &middot; ' +
-          esc(dateLabel(data.date)) +
+          esc(dateLabel(data.date)) + ' at ' + esc(timeLabel(data.time)) +
           (res.notified && res.notified.length ? '<br>Emailed to ' + esc(names(res.notified)) + '.' : '') +
           '<br>When you bring it back, open this page to check it in.',
         ok: 'Done',
@@ -851,7 +912,7 @@
   // ---- Events -------------------------------------------------------------
 
   document.addEventListener('click', (e) => {
-    const modeBtn = e.target.closest('.mode');
+    const modeBtn = e.target.closest('[data-mode]');
     if (modeBtn && modeBtn.dataset.mode !== mode) {
       setMode(modeBtn.dataset.mode);
       // Switching to Check In picks this phone's vehicle, or the only one out.
@@ -874,6 +935,8 @@
       if (e.target.dataset.issue === 'Other' && e.target.checked) $('#details').focus();
     }
   });
+
+  ['#date', '#time'].forEach((sel) => $(sel).addEventListener('input', () => { whenTouched = true; }));
 
   const driver = $('#driver');
   driver.addEventListener('input', () => { showSuggestions(); showNewDriver(); });
@@ -1017,7 +1080,9 @@
   // A page saved to the home screen can stay open for days. When it comes
   // back to the front, get the latest list of vehicles that are out.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && CONFIG && Date.now() - lastRefresh > 30000) refresh();
+    if (document.visibilityState !== 'visible' || !CONFIG) return;
+    freshenWhen();
+    if (Date.now() - lastRefresh > 30000) refresh();
   });
 
   $('#retry').addEventListener('click', () => {

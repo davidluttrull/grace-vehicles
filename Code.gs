@@ -170,6 +170,7 @@ function pageConfig_() {
 function checkOut(form) {
   form = form || {};
   const date = parseDate_(form.date);
+  const outAt = parseTime_(date, form.time);
   const driver = driverName_(form.driver);
   if (!driver) throw new Error('Please enter your name.');
   const vehicle = String(form.vehicle || '');
@@ -199,7 +200,7 @@ function checkOut(form) {
       'Driver': addDriver_(driver),
       'Vehicle': vehicle,
       'Status': OUT,
-      'Checked Out At': new Date(),
+      'Checked Out At': outAt,
       'Emailed': 'Check-out: Sending',
       'Trip ID': tripId,
     };
@@ -255,6 +256,7 @@ function checkIn(form) {
     emailedBefore = trip.emailed ? trip.emailed + '; ' : '';
     record = {
       'Date': trip.date,
+      'Checked Out At': trip.checkedOutAt, // for the email; already on the sheet
       'Driver': trip.driver,
       'Vehicle': trip.vehicle,
       'Status': RETURNED,
@@ -277,7 +279,7 @@ function checkIn(form) {
   return { status: 'saved', driver: by, notified: sent.names, config: pageConfig_() };
 }
 
-/** Every trip row on the sheet: [{row, id, status, vehicle, driver, date, checkedInBy, emailed}]. */
+/** Every trip row on the sheet: [{row, id, status, vehicle, driver, date, checkedOutAt, checkedInBy, emailed}]. */
 function tripRows_(sheet, cols) {
   const last = sheet.getLastRow();
   if (last < 2) return [];
@@ -290,6 +292,7 @@ function tripRows_(sheet, cols) {
       vehicle: String(get(r, 'Vehicle')).trim(),
       driver: String(get(r, 'Driver')).trim(),
       date: get(r, 'Date'),
+      checkedOutAt: get(r, 'Checked Out At'),
       checkedInBy: String(get(r, 'Checked In By')).trim(),
       emailed: String(get(r, 'Emailed')).trim(),
     };
@@ -372,8 +375,7 @@ function checkOutEmail_(record, closed) {
       '" on the sheet.';
   });
 
-  const text = [vehicle + ' checked out by ' + record['Driver'], '',
-    'Trip date: ' + tripDay, 'Checked out: ' + outAt];
+  const text = [vehicle + ' checked out by ' + record['Driver'], '', 'Checked out: ' + outAt];
   notes.forEach(function (n) { text.push('', 'Note: ' + n); });
 
   const block = notes.map(function (n) {
@@ -384,7 +386,7 @@ function checkOutEmail_(record, closed) {
     subject: 'Vehicle Sign-Out Log: ' + vehicle + ' checked out, ' + record['Driver'] + ' (' + tripDay + ')',
     text: text.join('\n'),
     html: emailCard_('Vehicle Check-Out', vehicle, 'Checked out ' + outAt,
-      emailRow_('Driver', record['Driver']) + emailRow_('Trip date', tripDay), block),
+      emailRow_('Driver', record['Driver']), block),
   };
 }
 
@@ -392,7 +394,9 @@ function checkInEmail_(record, issues) {
   const vehicle = record['Vehicle'];
   const inDay = when_(record['Checked In At'], 'EEE, MMM d');
   const inAt = inDay + ' at ' + when_(record['Checked In At'], 'h:mm a');
-  const outDay = when_(record['Date'], 'EEE, MMM d');
+  const out = record['Checked Out At'];
+  const outDay = out instanceof Date ? when_(out, 'EEE, MMM d') + ' at ' + when_(out, 'h:mm a')
+    : when_(record['Date'], 'EEE, MMM d');
   // Who checked it in, when it wasn't the driver who checked it out.
   const by = record['Checked In By'];
   const other = by && by.toLowerCase() !== String(record['Driver']).toLowerCase() ? by : '';
@@ -650,6 +654,19 @@ function parseDate_(value) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
   if (!m) throw new Error('Please pick a date.');
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
+}
+
+/**
+ * The check-out time: the trip date at the "14:05" the driver set. A page
+ * from before the time field was added sends none, so that uses now.
+ */
+function parseTime_(date, value) {
+  if (value === undefined || value === null) return new Date();
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(value));
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) throw new Error('Please pick the time.');
+  const at = new Date(date.getTime());
+  at.setHours(Number(m[1]), Number(m[2]), 0, 0);
+  return at;
 }
 
 /** Trims text and stops it from being read as a spreadsheet formula. */
