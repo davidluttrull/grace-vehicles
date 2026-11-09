@@ -160,6 +160,49 @@
     color: var(--chip-on-ink);
     font-weight: 600;
   }
+  .chip small {
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.25;
+    margin-top: 2px;
+    opacity: .8;
+  }
+
+  .modes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+  }
+  .mode {
+    min-height: 50px;
+    border: 0;
+    border-radius: 12px;
+    background: none;
+    color: var(--muted);
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .mode[aria-pressed="true"] { background: var(--chip-on-bg); color: var(--chip-on-ink); }
+  .mode[aria-pressed="true"] .count { background: var(--card); color: var(--ink); }
+  .count {
+    display: inline-block;
+    min-width: 22px;
+    padding: 0 6px;
+    margin-left: 4px;
+    border-radius: 11px;
+    background: var(--brand);
+    color: #10160C;
+    font-size: 13px;
+    line-height: 22px;
+    vertical-align: 2px;
+  }
 
   .check-row {
     display: flex;
@@ -316,9 +359,14 @@
   </main>
 
   <main id="form" hidden>
+    <div class="modes">
+      <button type="button" class="mode" data-mode="out" aria-pressed="true">Check Out</button>
+      <button type="button" class="mode" data-mode="in" aria-pressed="false">Check In<span class="count" id="outCount" hidden></span></button>
+    </div>
+
     <section class="card" id="tripCard">
-      <h2>Trip</h2>
-      <label class="field">
+      <h2 id="tripTitle">Trip</h2>
+      <label class="field" id="dateWrap">
         <span>Date</span>
         <input type="date" id="date" required>
       </label>
@@ -333,27 +381,19 @@
     </section>
 
     <section class="card" id="vehicleCard">
-      <h2>Vehicle</h2>
+      <h2 id="vehicleTitle">Vehicle</h2>
+      <p class="hint" id="vehicleHint" hidden>Pick the vehicle you&rsquo;re bringing back.</p>
       <div class="chips" id="vehicles" role="radiogroup" aria-label="Vehicle"></div>
+      <div class="chips" id="trips" role="radiogroup" aria-label="Vehicle to check in" hidden></div>
     </section>
 
-    <section class="card">
-      <h2>Inspections</h2>
-      <div class="checks">
-        <label class="check-row">
-          <input type="checkbox" id="preTrip">
-          <span><strong>Pre-trip inspection done</strong>
-            <small>Before you leave: tires, lights, mirrors, fluids and gauges.</small></span>
-        </label>
-        <label class="check-row">
-          <input type="checkbox" id="postTrip">
-          <span><strong>Post-trip inspection done</strong>
-            <small>When you return: walk around for damage, check for items left behind, take out trash.</small></span>
-        </label>
-      </div>
+    <section class="card" id="postTripCard" hidden>
+      <h2>Post-Trip Inspection</h2>
+      <p class="hint">Tick each one as you finish it.</p>
+      <div class="checks" id="postTrip"></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="issuesCard" hidden>
       <h2>Issues or Repairs Needed</h2>
       <p class="hint">Check anything that needs attention. Leave them all blank if nothing&rsquo;s wrong.</p>
       <div class="checks issue-list" id="issues"></div>
@@ -368,7 +408,7 @@
 
   <div class="bar" id="bar" hidden>
     <div class="bar-inner">
-      <button type="button" class="primary" id="submit">Submit</button>
+      <button type="button" class="primary" id="submit">Check Out</button>
     </div>
   </div>
 
@@ -393,11 +433,15 @@
   const CONFIG_KEY = 'gbc-vehicles-config';
   const NAME_KEY = 'gbc-vehicles-name';
   const CODE_KEY = 'gbc-vehicles-code';
+  const TRIP_KEY = 'gbc-vehicles-trip'; // the trip this phone last checked out
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
   let CONFIG;
-  let vehicle = '';
+  let mode = 'out';  // 'out' = Check Out, 'in' = Check In
+  let vehicle = '';  // Check Out: the vehicle picked
+  let tripId = '';   // Check In: the trip picked
+  let busy = false;  // saving, so a refresh doesn't redraw the form underneath
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -409,23 +453,42 @@
 
   // ---- Build the form -----------------------------------------------------
 
+  function outTrip(vehicleName) {
+    return CONFIG.out.find((t) => t.vehicle === vehicleName);
+  }
+
+  function findTrip(id) {
+    return CONFIG.out.find((t) => t.id === id);
+  }
+
+  function chip(label, sub, data) {
+    return '<button type="button" class="chip" role="radio" aria-checked="false" ' + data + '>' +
+      esc(label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</button>';
+  }
+
   function build() {
     const chips = $('#vehicles');
-    chips.innerHTML = '';
-    CONFIG.vehicles.forEach((name) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'chip';
-      b.setAttribute('role', 'radio');
-      b.setAttribute('aria-checked', 'false');
-      b.dataset.vehicle = name;
-      b.textContent = name;
-      chips.appendChild(b);
-    });
+    chips.innerHTML = CONFIG.vehicles.map((name) => {
+      const t = outTrip(name);
+      return chip(name, t ? 'Out: ' + t.driver : '', 'data-vehicle="' + esc(name) + '"');
+    }).join('');
     if (!CONFIG.vehicles.length) {
       chips.innerHTML = '<p class="hint" style="grid-column: 1 / -1">No vehicles are listed yet. ' +
         'Add them on the Vehicles tab of the sign-out sheet.</p>';
     }
+
+    $('#trips').innerHTML = CONFIG.out.length
+      ? CONFIG.out.map((t) => chip(t.vehicle, t.driver + (t.date ? ', ' + shortDay(t.date) : ''),
+        'data-trip="' + esc(t.id) + '"')).join('')
+      : '<p class="hint" style="grid-column: 1 / -1">No vehicles are checked out right now.</p>';
+
+    const count = $('#outCount');
+    count.textContent = CONFIG.out.length;
+    count.hidden = !CONFIG.out.length;
+
+    $('#postTrip').innerHTML = CONFIG.postTrip.map((item) =>
+      '<label class="check-row"><input type="checkbox" data-post="' + esc(item) + '">' +
+      '<span><strong>' + esc(item) + '</strong></span></label>').join('');
 
     $('#issues').innerHTML = CONFIG.issues.map((issue) =>
       '<label class="check-row"><input type="checkbox" data-issue="' + esc(issue) + '">' +
@@ -439,13 +502,40 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
 
+  function setMode(m) {
+    mode = m;
+    const out = m === 'out';
+    $$('.mode').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+    $('#tripTitle').textContent = out ? 'Trip' : 'Driver';
+    $('#dateWrap').hidden = !out;
+    $('#vehicleTitle').textContent = out ? 'Vehicle' : 'Vehicle to Check In';
+    $('#vehicleHint').hidden = out;
+    $('#vehicles').hidden = !out;
+    $('#trips').hidden = out;
+    // With nothing checked out, there's nothing to inspect.
+    const none = !CONFIG || !CONFIG.out.length;
+    $('#postTripCard').hidden = out || none;
+    $('#issuesCard').hidden = out || none;
+    $('#submit').textContent = out ? 'Check Out' : 'Check In';
+    $('#toast').hidden = true;
+  }
+
   function setVehicle(name) {
     vehicle = name;
-    $$('.chip').forEach((c) => c.setAttribute('aria-checked', String(c.dataset.vehicle === name)));
+    $$('#vehicles .chip').forEach((c) => c.setAttribute('aria-checked', String(c.dataset.vehicle === name)));
+  }
+
+  function setTrip(id) {
+    tripId = id;
+    $$('#trips .chip').forEach((c) => c.setAttribute('aria-checked', String(c.dataset.trip === id)));
   }
 
   function checkedIssues() {
     return $$('input[data-issue]').filter((i) => i.checked).map((i) => i.dataset.issue);
+  }
+
+  function checkedPostTrip() {
+    return $$('input[data-post]').filter((i) => i.checked).map((i) => i.dataset.post);
   }
 
   function updateDetails() {
@@ -461,23 +551,27 @@
 
   function collect() {
     return {
+      mode: mode,
       date: $('#date').value,
       driver: tidyName($('#driver').value),
       vehicle: vehicle,
-      preTrip: $('#preTrip').checked,
-      postTrip: $('#postTrip').checked,
+      tripId: tripId,
+      postTrip: checkedPostTrip(),
       issues: checkedIssues(),
       details: $('#details').value.trim(),
     };
   }
 
   function apply(data) {
+    setMode(data.mode || 'out');
     $('#date').value = data.date || today();
     $('#driver').value = data.driver || '';
-    // A vehicle taken off the Vehicles tab since it was picked is unpicked.
+    // A vehicle taken off the Vehicles tab, or a trip checked in from
+    // another phone, since it was picked is unpicked.
     setVehicle(CONFIG.vehicles.indexOf(data.vehicle) === -1 ? '' : data.vehicle);
-    $('#preTrip').checked = !!data.preTrip;
-    $('#postTrip').checked = !!data.postTrip;
+    setTrip(findTrip(data.tripId) ? data.tripId : '');
+    const post = data.postTrip || [];
+    $$('input[data-post]').forEach((i) => { i.checked = post.indexOf(i.dataset.post) !== -1; });
     const issues = data.issues || [];
     $$('input[data-issue]').forEach((i) => { i.checked = issues.indexOf(i.dataset.issue) !== -1; });
     $('#details').value = data.details || '';
@@ -485,8 +579,16 @@
     showNewDriver();
   }
 
+  // A fresh form. If the vehicle this phone checked out is still out, it
+  // opens on Check In with that vehicle picked.
   function resetForm() {
-    apply({ date: today(), driver: store((s) => s.getItem(NAME_KEY)) || '' });
+    const mine = findTrip(store((s) => s.getItem(TRIP_KEY)));
+    apply({
+      mode: mine ? 'in' : 'out',
+      tripId: mine ? mine.id : '',
+      date: today(),
+      driver: store((s) => s.getItem(NAME_KEY)) || '',
+    });
     window.scrollTo(0, 0);
   }
 
@@ -596,6 +698,11 @@
     return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   }
 
+  // "today", or "Tue, Nov 3" for an earlier day.
+  function shortDay(value) {
+    return value === today() ? 'today' : dateLabel(value);
+  }
+
   function names(list) {
     if (list.length < 2) return list.join('');
     return list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1];
@@ -626,9 +733,16 @@
   // ---- Submit -------------------------------------------------------------
 
   function validate(data) {
-    if (!data.date) return ['Pick the date.', '#date'];
-    if (!data.driver) return ['Enter the driver\u2019s name.', '#driver'];
-    if (!data.vehicle) return ['Pick which vehicle.', '#vehicleCard'];
+    if (data.mode === 'out') {
+      if (!data.date) return ['Pick the date.', '#date'];
+      if (!data.driver) return ['Enter your name.', '#driver'];
+      if (!data.vehicle) return ['Pick which vehicle.', '#vehicleCard'];
+      return null;
+    }
+    if (!data.driver) return ['Enter your name.', '#driver'];
+    if (!CONFIG.out.length) return ['No vehicles are checked out right now.', '#vehicleCard'];
+    if (!data.tripId) return ['Pick the vehicle you\u2019re checking in.', '#vehicleCard'];
+    if (data.postTrip.length < CONFIG.postTrip.length) return ['Finish the post-trip inspection and tick each item.', '#postTripCard'];
     if (data.issues.indexOf('Other') !== -1 && !data.details) return ['Describe the other issue.', '#details'];
     return null;
   }
@@ -645,61 +759,113 @@
     }
     $('#toast').hidden = true;
     hideSuggestions();
-    const n = data.issues.length;
-    const ok = await dialog({
-      title: 'Submit sign-out?',
-      body: '<span class="big">' + esc(data.vehicle) + '</span>' + esc(data.driver) + ' &middot; ' +
-        esc(dateLabel(data.date)) + '<br>' +
-        (n ? n + (n === 1 ? ' issue' : ' issues') + ' reported' : 'No issues reported') +
-        (data.preTrip ? '' : '<span class="warn">The pre-trip inspection isn\u2019t checked.</span>'),
-      ok: 'Submit',
-      cancel: 'Go back',
-    });
+    let ok;
+    if (data.mode === 'out') {
+      const t = outTrip(data.vehicle);
+      ok = await dialog({
+        title: 'Check out this vehicle?',
+        body: '<span class="big">' + esc(data.vehicle) + '</span>' + esc(data.driver) + ' &middot; ' +
+          esc(dateLabel(data.date)) +
+          (t ? '<span class="warn">' + esc(data.vehicle) + ' is still checked out to ' + esc(t.driver) +
+            (t.date ? ' since ' + esc(shortDay(t.date)) : '') + '. Checking it out again closes that trip ' +
+            'as not checked in.</span>' : ''),
+        ok: 'Check Out',
+        cancel: 'Go back',
+      });
+    } else {
+      const t = findTrip(data.tripId);
+      const n = data.issues.length;
+      ok = await dialog({
+        title: 'Check in this vehicle?',
+        body: '<span class="big">' + esc(t.vehicle) + '</span>' + esc(data.driver) + ' &middot; ' +
+          'post-trip inspection done<br>' +
+          (n ? n + (n === 1 ? ' issue' : ' issues') + ' reported' : 'No issues reported'),
+        ok: 'Check In',
+        cancel: 'Go back',
+      });
+    }
     if (ok) send(data);
   }
 
   async function send(data) {
     const btn = $('#submit');
+    const label = btn.textContent;
+    const out = data.mode === 'out';
+    const form = out
+      ? { date: data.date, driver: data.driver, vehicle: data.vehicle }
+      : { tripId: data.tripId, driver: data.driver, postTripDone: true, issues: data.issues, details: data.details };
+    const trip = findTrip(data.tripId);
+    const vehicleName = out ? data.vehicle : (trip ? trip.vehicle : '');
+    busy = true;
     btn.disabled = true;
     btn.textContent = 'Saving\u2026';
     let res;
     try {
-      res = await api({ action: 'submit', code: store((s) => s.getItem(CODE_KEY)), form: data });
+      res = await api({ action: out ? 'checkout' : 'checkin', code: store((s) => s.getItem(CODE_KEY)), form: form });
     } catch (err) {
-      toast(err.message + ' Your answers are still here, so try again.');
+      busy = false;
+      toast(err.message + ' Your answers are still here.');
+      refresh(); // Someone else may have checked it in, so get the latest list.
       return;
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Submit';
+      btn.textContent = label;
     }
+    busy = false;
 
     if (res.status === 'badcode') {
       forgetCode();
-      showGate('The driver code has changed. Enter the new one, then submit again.');
+      showGate('The driver code has changed. Enter the new one, then try again.');
       return;
     }
     store((s) => s.setItem(NAME_KEY, res.driver));
-    if (!knownDriver(res.driver)) {
-      CONFIG.drivers.push(res.driver);
-      CONFIG.drivers.sort((a, b) => a.localeCompare(b));
-      store((s) => s.setItem(CONFIG_KEY, JSON.stringify(CONFIG)));
+    if (out) {
+      store((s) => s.setItem(TRIP_KEY, res.tripId));
+    } else if (store((s) => s.getItem(TRIP_KEY)) === data.tripId) {
+      store((s) => s.removeItem(TRIP_KEY));
     }
-    await dialog({
-      check: true,
-      title: 'Sign-out saved',
-      body: '<span class="big">' + esc(data.vehicle) + '</span>' + esc(res.driver) + ' &middot; ' +
-        esc(dateLabel(data.date)) +
-        (res.notified.length ? '<br>Emailed to ' + esc(names(res.notified)) + '.' : ''),
-      ok: 'Done',
-    });
+    useConfig(res.config);
+
+    if (out) {
+      await dialog({
+        check: true,
+        title: 'Checked out',
+        body: '<span class="big">' + esc(vehicleName) + '</span>' + esc(res.driver) + ' &middot; ' +
+          esc(dateLabel(data.date)) +
+          (res.notified && res.notified.length ? '<br>Emailed to ' + esc(names(res.notified)) + '.' : '') +
+          '<br>When you bring it back, open this page to check it in.',
+        ok: 'Done',
+      });
+    } else {
+      await dialog({
+        check: true,
+        title: 'Checked in',
+        body: '<span class="big">' + esc(vehicleName) + '</span>' + esc(res.driver) + ' &middot; ' +
+          'thank you!' + (res.notified.length ? '<br>Emailed to ' + esc(names(res.notified)) + '.' : ''),
+        ok: 'Done',
+      });
+    }
     resetForm();
   }
 
   // ---- Events -------------------------------------------------------------
 
   document.addEventListener('click', (e) => {
-    const chip = e.target.closest('.chip');
-    if (chip) setVehicle(chip.dataset.vehicle);
+    const modeBtn = e.target.closest('.mode');
+    if (modeBtn && modeBtn.dataset.mode !== mode) {
+      setMode(modeBtn.dataset.mode);
+      // Switching to Check In picks this phone's vehicle, or the only one out.
+      if (mode === 'in' && !tripId) {
+        const mine = findTrip(store((s) => s.getItem(TRIP_KEY)));
+        if (mine) setTrip(mine.id);
+        else if (CONFIG.out.length === 1) setTrip(CONFIG.out[0].id);
+      }
+      return;
+    }
+    const c = e.target.closest('.chip');
+    if (!c) return;
+    if (c.dataset.vehicle) setVehicle(c.dataset.vehicle);
+    if (c.dataset.trip) setTrip(c.dataset.trip);
   });
 
   document.addEventListener('change', (e) => {
@@ -748,11 +914,18 @@
     $('#gateCode').focus();
   }
 
+  // Saves the lists from the sheet and redraws the buttons. A page saved on
+  // a phone before check-in/check-out has no out list or checklist yet.
+  function useConfig(config) {
+    CONFIG = Object.assign({ out: [], postTrip: [] }, config);
+    store((s) => s.setItem(CONFIG_KEY, JSON.stringify(CONFIG)));
+    build();
+  }
+
   function showForm(config) {
     const first = !CONFIG;
     const data = first ? null : collect();
-    CONFIG = config;
-    build();
+    useConfig(config);
     $('#loading').hidden = true;
     $('#gate').hidden = true;
     $('#toast').hidden = true;
@@ -775,7 +948,6 @@
         return;
       }
       store((s) => s.setItem(CODE_KEY, code));
-      store((s) => s.setItem(CONFIG_KEY, JSON.stringify(res)));
       showForm(res);
     } catch (err) {
       toast(err.message);
@@ -785,8 +957,6 @@
     }
   });
 
-  // Show the form at once from the lists saved on this phone, then refresh
-  // them from the sheet (new drivers, a changed vehicle list).
   // A link ending in #code=123456 saves the code on this phone, so drivers
   // don't have to type it. The part after # never leaves the phone, and it's
   // taken off the address once read. Returns true if the link had a code.
@@ -799,24 +969,18 @@
     return !!code;
   }
 
-  async function start() {
-    const fromLink = codeFromLink();
+  // Gets the latest lists (new drivers, vehicles out, a changed vehicle list)
+  // and redraws the form if anything changed, keeping what's been entered.
+  let lastRefresh = 0;
+  async function refresh(fromLink) {
     const code = store((s) => s.getItem(CODE_KEY));
-    if (!code) {
-      if (!API_URL) {
-        $('#loadingText').textContent = 'This page isn\u2019t connected to the sign-out sheet yet.';
-        return;
-      }
-      showGate();
-      return;
-    }
-    const cached = store((s) => JSON.parse(s.getItem(CONFIG_KEY)));
-    if (cached) showForm(cached);
+    if (!code) return;
+    lastRefresh = Date.now();
     let fresh;
     try {
       fresh = await api({ action: 'load', code: code });
     } catch (err) {
-      if (cached) return;
+      if (CONFIG) return;
       $('#loadingText').textContent = err.message;
       $('#retry').hidden = false;
       return;
@@ -827,9 +991,34 @@
         : 'The driver code has changed. Enter the new one.');
       return;
     }
-    store((s) => s.setItem(CONFIG_KEY, JSON.stringify(fresh)));
-    if (!cached || JSON.stringify(fresh) !== JSON.stringify(cached)) showForm(fresh);
+    if (busy) return;
+    if (!CONFIG || JSON.stringify(Object.assign({ out: [], postTrip: [] }, fresh)) !== JSON.stringify(CONFIG)) {
+      showForm(fresh);
+    }
   }
+
+  // Show the form at once from the lists saved on this phone, then refresh
+  // them from the sheet.
+  function start() {
+    const fromLink = codeFromLink();
+    if (!store((s) => s.getItem(CODE_KEY))) {
+      if (!API_URL) {
+        $('#loadingText').textContent = 'This page isn\u2019t connected to the sign-out sheet yet.';
+        return;
+      }
+      showGate();
+      return;
+    }
+    const cached = store((s) => JSON.parse(s.getItem(CONFIG_KEY)));
+    if (cached) showForm(cached);
+    refresh(fromLink);
+  }
+
+  // A page saved to the home screen can stay open for days. When it comes
+  // back to the front, get the latest list of vehicles that are out.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && CONFIG && Date.now() - lastRefresh > 30000) refresh();
+  });
 
   $('#retry').addEventListener('click', () => {
     $('#retry').hidden = true;
